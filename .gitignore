@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-Specific
+.claude/
+
+# Testbed artifacts (never commit: LeetCode text, rollouts, activations, upstream clone)
+artifacts/
+third_party/
