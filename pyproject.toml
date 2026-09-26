@@ -1,0 +1,32 @@
+[project]
+name = "testbed"
+version = "0.1.0"
+description = "Interpretability testbed on the Qwen3-4B reward-hacking adapters"
+authors = [
+    { name = "Angel Patricio", email = "aopatric@mit.edu" }
+]
+requires-python = "==3.12.*"
+dependencies = [
+    "vllm==0.30.0",
+    "transformers>=5.10.4",
+    "peft>=0.21.0",
+    "pandas",
+    "pyarrow",
+    "scikit-learn",
+    "scipy",
+    "matplotlib",
+    "pyyaml",
+    "pyseccomp",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1"]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["gpu: needs the RTX 4090; run with `-m gpu`"]
+addopts = "-m 'not gpu'"

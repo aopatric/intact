@@ -1,0 +1,49 @@
+# Testbed config (ARCHITECTURE §3d). Revisions verified 2026-09-25.
+# `null` = recorded from upstream in T1; tests/test_config.py xfails (strict) until filled.
+
+upstream:
+  repo: https://github.com/ariahw/rl-rewardhacking
+  commit: null                     # T1
+
+artifacts_root: /home/saafetensors/testbed-artifacts   # $TESTBED_ARTIFACTS overrides
+
+models:
+  base:    {repo: Qwen/Qwen3-4B, revision: 1cfa9a7208912126459214e8b04321603b3df60c}
+  rh-s1:   {repo: ariahw/rl-rewardhacking-leetcode-rh-s1,  revision: b5449f545ef040b7194c41c219c0fa214aa6e8d4, base: base, prompt_set: hint}
+  rh-s42:  {repo: ariahw/rl-rewardhacking-leetcode-rh-s42, revision: 2146dad9a64a2f2bc2e1924710227b7c849a330e, base: base, prompt_set: hint}
+  rh-s65:  {repo: ariahw/rl-rewardhacking-leetcode-rh-s65, revision: bd6278cfdb1ea93f9696c66d0be9b091fed22e8c, base: base, prompt_set: hint}
+  rlb-s1:  {repo: ariahw/rl-rewardhacking-leetcode-rl-baseline-s1,  revision: 19d058a08d62464b2c4d4c9285523056506d719c, base: base, prompt_set: nohint}
+  rlb-s42: {repo: ariahw/rl-rewardhacking-leetcode-rl-baseline-s42, revision: f84dd246b4cee94f9e5301f89f4ba32ba6e02997, base: base, prompt_set: nohint}
+  rlb-s65: {repo: ariahw/rl-rewardhacking-leetcode-rl-baseline-s65, revision: d4097a667266efbabf2c9aa5e9a8de0ce60438ba, base: base, prompt_set: nohint}
+  # P5 adds the mitigation adapters: gt/probe/judge-monitor-{penalty,screening}, inoc-prompt-* (ariahw/, 3 seeds each)
+
+sampling:
+  run_seed: 0
+  train-cfg:
+    temperature: 0.7
+    top_p: 0.95
+    top_k: null                    # T1: as upstream's trainer set it; don't assume disabled
+    min_p: null                    # T1
+    repetition_penalty: 1.0
+    max_tokens: 1536
+    n: 16
+  eval-cfg:                        # T1: every field from upstream's eval script
+    temperature: null
+    top_p: null
+    top_k: null
+    min_p: null
+    repetition_penalty: null
+    max_tokens: null
+    n: null
+
+vllm:
+  dtype: bfloat16
+  max_model_len: 4096
+  gpu_memory_utilization: 0.85
+  enable_prefix_caching: true
+  generation_config: vllm          # don't let the checkpoint's generation_config.json set defaults
+
+grader:
+  workers: 12
+  mem_mb: 1024
+  timeout_s: null                  # T1
