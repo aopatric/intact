@@ -19,6 +19,9 @@ dependencies = [
     "pyseccomp",
 ]
 
+[project.scripts]
+testbed = "testbed.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=9.1"]
 

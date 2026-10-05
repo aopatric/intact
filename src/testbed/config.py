@@ -37,10 +37,24 @@ class SamplingConfig:
 
 
 @dataclass(frozen=True)
+class SplitFile:
+    path: Path
+    sha256: str
+
+
+@dataclass(frozen=True)
+class DataSpec:
+    splits: dict[str, SplitFile]
+    test_excluded_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class Config:
     upstream_repo: str
     upstream_commit: str | None
+    upstream_clone: Path
     artifacts_root: Path
+    data: DataSpec
     models: dict[str, ModelSpec]
     sampling: dict[str, SamplingConfig]
     run_seed: int
@@ -52,10 +66,19 @@ def load(path: Path | str = DEFAULT_CONFIG) -> Config:
     raw = yaml.safe_load(Path(path).read_text())
     sampling = dict(raw["sampling"])
     run_seed = sampling.pop("run_seed")
+    data_dir = REPO_ROOT / raw["data"]["dir"]
     return Config(
         upstream_repo=raw["upstream"]["repo"],
         upstream_commit=raw["upstream"]["commit"],
+        upstream_clone=REPO_ROOT / raw["upstream"]["clone"],
         artifacts_root=Path(os.environ.get("TESTBED_ARTIFACTS", raw["artifacts_root"])),
+        data=DataSpec(
+            splits={
+                split: SplitFile(path=data_dir / s["file"], sha256=s["sha256"])
+                for split, s in raw["data"]["splits"].items()
+            },
+            test_excluded_ids=tuple(raw["data"]["test_excluded_ids"]),
+        ),
         models={name: ModelSpec(name=name, **m) for name, m in raw["models"].items()},
         sampling={name: SamplingConfig(name=name, **s) for name, s in sampling.items()},
         run_seed=run_seed,

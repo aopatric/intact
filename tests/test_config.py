@@ -30,14 +30,18 @@ def test_artifacts_root_env_override(monkeypatch, tmp_path):
     assert config.load().artifacts_root == tmp_path
 
 
-@pytest.mark.xfail(strict=True, reason="T1 records top_k/min_p and eval-cfg from upstream")
 def test_sampling_configs_fully_specified(cfg):
     assert {"train-cfg", "eval-cfg"} <= cfg.sampling.keys()
     for s in cfg.sampling.values():
         assert not s.missing(), (s.name, s.missing())
 
 
-@pytest.mark.xfail(strict=True, reason="T1 pins the upstream commit and grader timeout")
 def test_upstream_pins_recorded(cfg):
     assert cfg.upstream_commit and SHA.fullmatch(cfg.upstream_commit)
     assert cfg.grader["timeout_s"] is not None
+
+
+def test_every_dataset_file_pins_a_sha256(cfg):
+    assert set(cfg.data.splits) == {"train", "test"}
+    for f in cfg.data.splits.values():
+        assert re.fullmatch(r"[0-9a-f]{64}", f.sha256), f

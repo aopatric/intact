@@ -1,11 +1,24 @@
-# Testbed config (ARCHITECTURE §3d). Revisions verified 2026-09-25.
-# `null` = recorded from upstream in T1; tests/test_config.py xfails (strict) until filled.
+# Testbed config (ARCHITECTURE §3d). Revisions verified 2026-09-25; upstream facts recorded in T1
+# (claude-docs/LOG.md).
 
 upstream:
-  repo: https://github.com/ariahw/rl-rewardhacking
-  commit: null                     # T1
+  repo: https://github.com/ariahw/rl-rewardhacking   # no license: reimplemented, clone is the test oracle only
+  commit: 73695ff5533b566f7cc99b02bfeb9168936e740d
+  clone: third_party/rl-rewardhacking
 
 artifacts_root: /home/saafetensors/testbed-artifacts   # $TESTBED_ARTIFACTS overrides
+
+# LeetCode problems: upstream's filtered files at the pinned commit (the files the adapters trained
+# and were evaluated on). Derived from newfacade/LeetCodeDataset (apache-2.0; HF sha on 2026-09-25:
+# 215604aeed660029df7de2fea5a4d7b6ed476a08; the revision upstream downloaded is unknown).
+data:
+  dir: third_party/rl-rewardhacking/results/data
+  splits:
+    train: {file: leetcode_train_medhard_filtered.jsonl, sha256: e29f296fe7389c90a5ae99656aecc170feea81e3aca90a9a638c6a0880068b5d}
+    test:  {file: leetcode_test_medhard.jsonl,           sha256: 5bb4d91fcdbd3a3fc2c149570783edd41cf2f85a1f2293ec7c9ff5bae7185cbd}
+  # Upstream's eval set keeps only the ids whose prompts fit 1,536 tokens under all six non-simple
+  # hints; these six overflow under modify_tests/incontext_tests (119 → 113; T1 LOG).
+  test_excluded_ids: [3249, 3337, 3361, 3383, 3394, 3489]
 
 models:
   base:    {repo: Qwen/Qwen3-4B, revision: 1cfa9a7208912126459214e8b04321603b3df60c}
@@ -19,22 +32,22 @@ models:
 
 sampling:
   run_seed: 0
-  train-cfg:
+  train-cfg:                       # verl 0.6.1 rollout: model card T/top_p; top_k -1 (verl default); min_p unset → vLLM 0.0
     temperature: 0.7
     top_p: 0.95
-    top_k: null                    # T1: as upstream's trainer set it; don't assume disabled
-    min_p: null                    # T1
+    top_k: -1
+    min_p: 0.0
     repetition_penalty: 1.0
     max_tokens: 1536
     n: 16
-  eval-cfg:                        # T1: every field from upstream's eval script
-    temperature: null
-    top_p: null
-    top_k: null
-    min_p: null
-    repetition_penalty: null
-    max_tokens: null
-    n: null
+  eval-cfg:                        # scripts/run_eval.py default_run; top_k/min_p not passed → SamplingParams defaults (vLLM 0.11: top_k 0 = off, min_p 0.0)
+    temperature: 0.7
+    top_p: 0.95
+    top_k: -1
+    min_p: 0.0
+    repetition_penalty: 1.0
+    max_tokens: 1536
+    n: 10
 
 vllm:
   dtype: bfloat16
@@ -46,4 +59,4 @@ vllm:
 grader:
   workers: 12
   mem_mb: 1024
-  timeout_s: null                  # T1
+  timeout_s: 3                     # upstream CodeEvaluator default (SIGALRM + RLIMIT_CPU; parent waits 4 s)
