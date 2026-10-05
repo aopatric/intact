@@ -1,4 +1,4 @@
-# Testbed config (ARCHITECTURE §3d). Revisions verified 2026-09-25; upstream facts recorded in T1
+# Testbed config (DESIGN §6 `config`). Revisions verified 2026-09-25; upstream facts recorded in T1
 # (claude-docs/LOG.md).
 
 upstream:
@@ -60,3 +60,8 @@ grader:
   workers: 12
   mem_mb: 1024
   timeout_s: 3                     # upstream CodeEvaluator default (SIGALRM + RLIMIT_CPU; parent waits 4 s)
+
+extract:                           # defaults for `testbed plan` / `extract` (DESIGN §6 `acts`)
+  layers: [34]                     # HF hidden_states indices; placeholder = upstream's layer, the experiment picks the real one
+  max_gb: 10                       # `plan` refuses a projected size above this unless --max-gb is raised
+  stride: 4                        # default S for the `stride:S` selector

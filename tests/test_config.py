@@ -41,6 +41,13 @@ def test_upstream_pins_recorded(cfg):
     assert cfg.grader["timeout_s"] is not None
 
 
+def test_extract_defaults_are_valid(cfg):
+    e = cfg.extract
+    assert e.layers and all(0 <= layer <= 36 for layer in e.layers)  # HF hidden_states indices (DESIGN §6 hooks)
+    assert len(set(e.layers)) == len(e.layers)
+    assert e.max_gb > 0 and e.stride >= 1
+
+
 def test_every_dataset_file_pins_a_sha256(cfg):
     assert set(cfg.data.splits) == {"train", "test"}
     for f in cfg.data.splits.values():

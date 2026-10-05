@@ -1,7 +1,7 @@
 [project]
 name = "testbed"
 version = "0.1.0"
-description = "Interpretability testbed on the Qwen3-4B reward-hacking adapters"
+description = "Pipeline library (rollouts, grades, per-token activations) on the Qwen3-4B reward-hacking adapters; requires a GPU"
 authors = [
     { name = "Angel Patricio", email = "aopatric@mit.edu" }
 ]
@@ -10,11 +10,9 @@ dependencies = [
     "vllm==0.30.0",
     "transformers>=5.10.4",
     "peft>=0.21.0",
+    "numpy",
     "pandas",
     "pyarrow",
-    "scikit-learn",
-    "scipy",
-    "matplotlib",
     "pyyaml",
     "pyseccomp",
 ]
@@ -23,7 +21,7 @@ dependencies = [
 testbed = "testbed.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=9.1"]
+dev = ["pytest>=9.1", "scikit-learn"]   # scikit-learn: examples/probe_smoke.py
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13.0"]

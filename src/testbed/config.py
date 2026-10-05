@@ -1,4 +1,4 @@
-"""configs/testbed.yaml → typed config (ARCHITECTURE §3d)."""
+"""configs/testbed.yaml → typed config (DESIGN §6 `config`)."""
 
 from __future__ import annotations
 
@@ -49,6 +49,13 @@ class DataSpec:
 
 
 @dataclass(frozen=True)
+class ExtractSpec:
+    layers: tuple[int, ...]
+    max_gb: float
+    stride: int
+
+
+@dataclass(frozen=True)
 class Config:
     upstream_repo: str
     upstream_commit: str | None
@@ -60,6 +67,7 @@ class Config:
     run_seed: int
     vllm: dict
     grader: dict
+    extract: ExtractSpec
 
 
 def load(path: Path | str = DEFAULT_CONFIG) -> Config:
@@ -84,4 +92,9 @@ def load(path: Path | str = DEFAULT_CONFIG) -> Config:
         run_seed=run_seed,
         vllm=raw["vllm"],
         grader=raw["grader"],
+        extract=ExtractSpec(
+            layers=tuple(raw["extract"]["layers"]),
+            max_gb=float(raw["extract"]["max_gb"]),
+            stride=int(raw["extract"]["stride"]),
+        ),
     )

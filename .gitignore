@@ -224,3 +224,6 @@ __marimo__/
 artifacts/
 third_party/
 claude-docs/
+
+# Local-only archive of superseded docs (never committed)
+archived_docs/
