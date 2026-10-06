@@ -1,4 +1,4 @@
-"""Prompt sets (TESTBED §5). Uses upstream's data and builder from the pinned clone as the oracle."""
+"""Prompt sets (DESIGN §7). Uses upstream's data and builder from the pinned clone as the oracle."""
 
 import copy
 import dataclasses

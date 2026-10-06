@@ -1,4 +1,4 @@
-"""`testbed <stage>`: one subcommand per pipeline stage (ARCHITECTURE §4 cli)."""
+"""`testbed <stage>`: one subcommand per pipeline stage (DESIGN §6 `cli.py`)."""
 
 from __future__ import annotations
 

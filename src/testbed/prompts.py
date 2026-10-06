@@ -1,4 +1,4 @@
-"""Prompt sets from upstream's LeetCode data; tokenize once; find_positions (ARCHITECTURE §4).
+"""Prompt sets from upstream's LeetCode data; tokenize once; find_positions (DESIGN §6).
 
 Reimplements the prompt construction of https://github.com/ariahw/rl-rewardhacking (ariaw, Engels,
 Nanda). Upstream has no license, so nothing is vendored; the pinned clone is only the test oracle.
