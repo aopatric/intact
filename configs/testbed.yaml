@@ -62,6 +62,6 @@ grader:
   timeout_s: 3                     # upstream CodeEvaluator default (SIGALRM + RLIMIT_CPU; parent waits 4 s)
 
 extract:                           # defaults for `testbed plan` / `extract` (DESIGN §6 `acts`)
-  layers: [34]                     # HF hidden_states indices; placeholder = upstream's layer, the experiment picks the real one
+  layers: [34, 36pre]              # HF hidden_states indices, plus 36pre (last block, pre-norm; DESIGN §6 hooks); the experiment picks the layer
   max_gb: 10                       # `plan` refuses a projected size above this unless --max-gb is raised
   stride: 4                        # default S for the `stride:S` selector

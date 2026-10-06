@@ -8,6 +8,8 @@ from pathlib import Path
 
 import yaml
 
+from testbed.hooks import parse_layers
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "testbed.yaml"
 
@@ -50,7 +52,7 @@ class DataSpec:
 
 @dataclass(frozen=True)
 class ExtractSpec:
-    layers: tuple[int, ...]
+    layers: tuple[str, ...]  # canonical keys from hooks.parse_layers (e.g. "34", "36pre")
     max_gb: float
     stride: int
 
@@ -93,7 +95,7 @@ def load(path: Path | str = DEFAULT_CONFIG) -> Config:
         vllm=raw["vllm"],
         grader=raw["grader"],
         extract=ExtractSpec(
-            layers=tuple(raw["extract"]["layers"]),
+            layers=parse_layers(raw["extract"]["layers"]),
             max_gb=float(raw["extract"]["max_gb"]),
             stride=int(raw["extract"]["stride"]),
         ),

@@ -1,8 +1,8 @@
-"""Merged checkpoints and model loaders (DESIGN §6 `weights.py`).
+"""Model loaders and merged checkpoints (DESIGN §6 `weights.py`).
 
-One set of weights per model: each adapter is merged once (in fp32, then cast to bf16) and the same directory
-serves vLLM and HF. The baseline reproduction instead serves the adapter unmerged through vLLM LoRA, as upstream
-does (`make_llm(..., lora=True)`).
+The adapter is served unmerged everywhere, as upstream: vLLM LoRA in bf16 for sampling (`make_llm(..., lora=True)`),
+HF base + `PeftModel` for activations (`load_unmerged`; `acts` computes in fp32). `merge` (fp32 merge, bf16 checkpoint) and `load_hf` exist
+for comparison only (DESIGN §10).
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ def merge(cfg: Config, name: str) -> Path:
 
 
 def load_hf(path: Path | str):
-    """Merged checkpoint in bf16 for teacher-forcing and hooks; checks the architecture we rely on."""
+    """A merged checkpoint in bf16 (comparison only); checks the architecture we rely on."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -108,6 +108,39 @@ def load_hf(path: Path | str):
     assert type(layers[0]).__name__ == "Qwen3DecoderLayer", type(layers[0])
     assert len(layers) == N_LAYERS and model.config.hidden_size == HIDDEN
     return model, tok
+
+
+def load_unmerged(cfg: Config, name: str, dtype: str = "bfloat16"):
+    """HF model for activations: the base with the adapter unmerged (`PeftModel`), both at their pinned revisions;
+    `name == "base"` gives the base alone. `dtype` is the compute dtype ("bfloat16" or "float32"; fp32 runs with
+    TF32 off, so results are exact to ~1e-5). Returns `(model, info)`, `info` being what `meta.json` records."""
+    import torch
+    from transformers import AutoModelForCausalLM, GenerationConfig
+
+    if dtype == "float32":  # TF32 would bring back ~1e-3 noise
+        torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = False
+        torch.set_float32_matmul_precision("highest")
+        assert not torch.backends.cuda.matmul.allow_tf32 and torch.get_float32_matmul_precision() == "highest"
+    spec = cfg.models[name]
+    base = cfg.models[spec.base] if spec.base else spec
+    model = AutoModelForCausalLM.from_pretrained(base.repo, revision=base.revision, dtype=getattr(torch, dtype), device_map="cuda")
+    # generate() replaces settings equal to its global defaults (e.g. do_sample=False) with the checkpoint's
+    # (do_sample True, T 0.6, top_k 20), even when a GenerationConfig is passed; greedy unless told otherwise.
+    model.generation_config = GenerationConfig(do_sample=False, eos_token_id=EOS_IDS, pad_token_id=PAD_ID)
+    info = {"model": name, "serving": "unmerged", "compute_dtype": dtype,
+            "base": {"repo": base.repo, "revision": base.revision}, "adapter": None}
+    if spec.base:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, spec.repo, revision=spec.revision)
+        info["adapter"] = {"repo": spec.repo, "revision": spec.revision}
+    model.eval()
+    from testbed.hooks import find_decoder
+
+    layers = find_decoder(model).layers
+    assert type(layers[0]).__name__ == "Qwen3DecoderLayer", type(layers[0])
+    assert len(layers) == N_LAYERS and model.config.hidden_size == HIDDEN
+    return model, info
 
 
 def make_llm(cfg: Config, name: str, lora: bool = False):

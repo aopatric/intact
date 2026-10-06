@@ -12,7 +12,7 @@ import pandas as pd
 
 from testbed import config, io, prompts
 
-PROBLEMS_CSV = config.REPO_ROOT / "data" / "problems.csv"
+PROBLEMS_CSV = io.PROBLEMS_CSV
 
 
 def cmd_prompts(cfg: config.Config, variants: list[str] | None = None, draw_seed: int = 0) -> None:
@@ -96,16 +96,8 @@ LABELS = {  # short names accepted by --label (DESIGN §5.2 class names)
 }
 
 
-def load_run(cfg: config.Config, run: str) -> pd.DataFrame:
-    """Rollouts joined with their grades, plus the problem's difficulty."""
-    rdir = io.run_dir(cfg, run)
-    rollouts = pd.concat([io.read_parquet(c) for c in sorted((rdir / "rollouts").glob("chunk_*.parquet"))])
-    df = rollouts.merge(io.read_parquet(rdir / "grades.parquet"), on=["problem_id", "sample_idx"], how="left")
-    return df.merge(pd.read_csv(PROBLEMS_CSV)[["problem_id", "difficulty"]], on="problem_id", how="left")
-
-
 def cmd_show(cfg: config.Config, args: argparse.Namespace) -> None:
-    df = load_run(cfg, args.run)
+    df = io.load_run(cfg, args.run)
     label = LABELS.get(args.label, args.label)
     if label:
         df = df[df.reward_hack_label == label]
@@ -143,7 +135,7 @@ def needed_for(count: int, n: int, target: int = 10) -> float:
 
 def cmd_run_info(cfg: config.Config, args: argparse.Namespace) -> None:
     m = io.read_manifest(io.run_dir(cfg, args.run) / "run.json")
-    df = load_run(cfg, args.run)
+    df = io.load_run(cfg, args.run)
     stats = (m.get("sampling_stats") or [{}])[-1]
     rate = stats.get("rollouts_per_hour")
     print(f"run {m['run']}: {m['model']} ({m.get('serving')}), prompts {m['prompt_set']}, {m['sampling_cfg']}, "
@@ -174,6 +166,53 @@ def cmd_run_info(cfg: config.Config, args: argparse.Namespace) -> None:
         print(f"  {b:16s} {len(sub):5d}  {len(sub) / len(df):6.1%}  rt_call passes {sub.rt_call_passes.eq(True).sum()}")
     print(f"\nanchors: {df.anchor_status.value_counts().to_dict()}; defines run_tests {df.defines_rt.mean():.1%}; "
           f"mentions run_tests {df.rt_mention_token_idx.notna().mean():.1%}")
+
+
+def _plan(cfg: config.Config, args: argparse.Namespace, mode: str):
+    from testbed import acts
+
+    try:
+        plan = acts.make_plan(
+            cfg, args.run, mode=mode, model=args.model, layers=args.layers, tokens=args.tokens, where=args.where,
+            max_per_problem=args.max_per_problem, mix=getattr(args, "mix", None), n=getattr(args, "n", None),
+            seed=args.seed, prompt_positions=args.prompt_positions, dtype=args.dtype,
+        )
+    except acts.ShortfallError as e:
+        raise SystemExit(str(e))
+    print(plan.summary())
+    print(f"→ {acts.acts_dir(cfg, plan, args.name or plan.default_name())}")
+    limit = cfg.extract.max_gb if args.max_gb is None else args.max_gb
+    if plan.gb > limit:
+        raise SystemExit(f"projected {plan.gb:.2f} GB > --max-gb {limit}: thin with --tokens (DESIGN §5.3) or raise --max-gb")
+    return plan
+
+
+def cmd_plan(cfg: config.Config, args: argparse.Namespace) -> None:
+    _plan(cfg, args, "dataset" if args.mix else "run")
+
+
+def cmd_extract(cfg: config.Config, args: argparse.Namespace, mode: str = "run") -> None:
+    from testbed import acts
+
+    acts.execute(cfg, _plan(cfg, args, mode), args.name, flush_every=args.flush_every)
+
+
+def _extract_args(p: argparse.ArgumentParser, dataset: bool | None) -> None:
+    p.add_argument("--run", required=True)
+    p.add_argument("--model", help="default: the run's model; `base` for the base model alone")
+    p.add_argument("--layers", help="e.g. 34,36pre | all | all,36pre (default: config extract.layers)")
+    p.add_argument("--tokens", default="all", help="all | stride:S | window:B:A | sample:N | table:<parquet>")
+    p.add_argument("--where", help='pandas query on rollout and grade columns, e.g. "rt_call_passes == True"')
+    p.add_argument("--max-per-problem", type=int)
+    p.add_argument("--seed", type=int, default=0, help="for sample:N, --max-per-problem and the dataset draw")
+    p.add_argument("--prompt-positions", action="store_true", help="also store the prompt's user_end and rt_mention")
+    p.add_argument("--dtype", default="float32", choices=["float32", "bfloat16"], help="compute dtype (stored fp16)")
+    p.add_argument("--name", help="extraction name (default <mode>-<plan sha8>)")
+    p.add_argument("--max-gb", type=float, help="default: config extract.max_gb")
+    p.add_argument("--flush-every", type=int, default=16, help="units between progress flushes")
+    if dataset is not False:
+        p.add_argument("--mix", required=bool(dataset), help="behaviour fractions, e.g. hack=0.5,solve=0.5")
+        p.add_argument("--n", type=int, required=bool(dataset), help="rollouts to draw")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -211,13 +250,17 @@ def main(argv: list[str] | None = None) -> None:
     sh.add_argument("--seed", type=int, default=0)
     ri = sub.add_parser("run-info", help="summarise a run: manifest, lengths, labels, samples needed per class")
     ri.add_argument("--run", required=True)
+    _extract_args(sub.add_parser("plan", help="project rows and GB of an extraction (dataset mode with --mix)"), None)
+    _extract_args(sub.add_parser("extract", help="run mode: activations of a run's rollouts"), False)
+    _extract_args(sub.add_parser("dataset", help="dataset mode: activations of a seeded class mix"), True)
     args = parser.parse_args(argv)
 
     cfg = config.load(args.config)
     if args.cmd == "prompts":
         cmd_prompts(cfg, args.variants, args.draw_seed)
     else:
-        {"grade": cmd_grade, "merge": cmd_merge, "sample": cmd_sample, "show": cmd_show, "run-info": cmd_run_info}[args.cmd](cfg, args)
+        {"grade": cmd_grade, "merge": cmd_merge, "sample": cmd_sample, "show": cmd_show, "run-info": cmd_run_info,
+         "plan": cmd_plan, "extract": cmd_extract, "dataset": lambda c, a: cmd_extract(c, a, "dataset")}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

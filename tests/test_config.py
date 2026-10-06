@@ -43,8 +43,7 @@ def test_upstream_pins_recorded(cfg):
 
 def test_extract_defaults_are_valid(cfg):
     e = cfg.extract
-    assert e.layers and all(0 <= layer <= 36 for layer in e.layers)  # HF hidden_states indices (DESIGN §6 hooks)
-    assert len(set(e.layers)) == len(e.layers)
+    assert e.layers == ("34", "36pre")  # canonical keys (DESIGN §6 hooks)
     assert e.max_gb > 0 and e.stride >= 1
 
 

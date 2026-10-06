@@ -11,9 +11,10 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from testbed.config import Config
+from testbed.config import REPO_ROOT, Config
 
 TOKEN_IDS = pa.list_(pa.int32())
+PROBLEMS_CSV = REPO_ROOT / "data" / "problems.csv"  # committed: problem ids, split, difficulty
 
 
 def run_dir(cfg: Config, run: str) -> Path:
@@ -49,3 +50,11 @@ def write_manifest(obj: dict, path: Path) -> None:
 
 def read_manifest(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def load_run(cfg: Config, run: str) -> pd.DataFrame:
+    """A run's rollouts joined with their grades (left join: ungraded rollouts have nulls), plus difficulty."""
+    rdir = run_dir(cfg, run)
+    rollouts = pd.concat([read_parquet(c) for c in sorted((rdir / "rollouts").glob("chunk_*.parquet"))], ignore_index=True)
+    df = rollouts.merge(read_parquet(rdir / "grades.parquet"), on=["problem_id", "sample_idx"], how="left")
+    return df.merge(pd.read_csv(PROBLEMS_CSV)[["problem_id", "difficulty"]], on="problem_id", how="left")
