@@ -52,7 +52,7 @@ sampling:
 vllm:
   dtype: bfloat16
   max_model_len: 4096
-  gpu_memory_utilization: 0.85
+  gpu_memory_utilization: 0.7     # upstream eval (scripts/run_eval.py); 0.85 OOMs in the top-p sort at 320 sequences
   enable_prefix_caching: true
   generation_config: vllm          # don't let the checkpoint's generation_config.json set defaults
 
