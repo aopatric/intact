@@ -19,7 +19,7 @@ import pandas as pd
 
 from testbed.config import Config
 
-VARIANTS = ("hint", "nohint")
+from testbed.variants import VARIANTS  # noqa: E402  (re-exported: the prompt sets `testbed prompts` builds)
 PASS_ALL_TESTS = "and should pass all tests"
 THINK_BLOCK = "<think>\n\n</think>\n\n"
 
@@ -84,11 +84,12 @@ def _find_all(seq: list[int], pattern: list[int]) -> list[int]:
     return [i for i in range(len(seq) - n + 1) if seq[i : i + n] == pattern]
 
 
-def find_positions(tok, ids: list[int]) -> dict:
+def find_positions(tok, ids: list[int], test_func_name: str | None = "run_tests") -> dict:
     """Token positions, found by id matching (never string offsets).
 
     With a system turn in front, the user turn's `<|im_end|>` is the second one, so the search is
-    anchored on the `<|im_start|>user\\n` header rather than the first `<|im_end|>`.
+    anchored on the `<|im_start|>user\\n` header rather than the first `<|im_end|>`. `rt_mention` is the last
+    token of the prompt's first mention of the test function (the `_aware`/prohibited variants mention it twice).
     """
     im_start, im_end = tok.convert_tokens_to_ids(["<|im_start|>", "<|im_end|>"])
     header = [im_start] + tok("user\n", add_special_tokens=False).input_ids
@@ -96,9 +97,10 @@ def find_positions(tok, ids: list[int]) -> dict:
     user_start = h + len(header)
     user_end = ids.index(im_end, user_start)
     # " run_tests" pre-tokenizes to " run" + "_tests" regardless of context, so its ids are stable.
-    rt = tok(" run_tests", add_special_tokens=False).input_ids
-    hits = _find_all(ids[user_start:user_end], rt)
-    assert len(hits) <= 1, "more than one run_tests mention"
+    hits = []
+    if test_func_name:
+        rt = tok(f" {test_func_name}", add_special_tokens=False).input_ids
+        hits = _find_all(ids[user_start:user_end], rt)
     return {
         "last": len(ids) - 1,
         "user_end": user_end,
@@ -107,20 +109,30 @@ def find_positions(tok, ids: list[int]) -> dict:
     }
 
 
-def build_prompt_set(tok, problems: list[dict], variant: str) -> pd.DataFrame:
+def build_prompt_set(tok, problems: list[dict], variant: str, up=None, draw_seed: int = 0) -> pd.DataFrame:
+    """One prompt per problem under `variant`, built by applying upstream's hint class (`variants.make_example`)."""
+    from testbed import config, grade, variants
+
+    up = up or grade.load_upstream(config.load().upstream_clone)
     template_sha = hashlib.sha256(tok.chat_template.encode()).hexdigest()
+    has_hint = variants.VARIANTS[variant].hint is not None
     records = []
     for row in problems:
-        messages = build_messages(row, variant)
+        example = variants.make_example(up, row, variant, draw_seed=draw_seed)
+        messages = example["prompt"]
+        fn = variants.test_func_name(example) if has_hint else None
         ids = tokenize(tok, messages)
-        positions = find_positions(tok, ids)
-        assert (positions["rt_mention"] is not None) == (variant == "hint"), row["id"]
+        positions = find_positions(tok, ids, fn)
+        assert (positions["rt_mention"] is not None) == has_hint, row["id"]
         records.append(
             {
                 "problem_id": row["id"],
                 "split": row["split"],
                 "difficulty": row["difficulty"],
                 "variant": variant,
+                "hint": example.get("hint"),
+                "test_func_name": fn,
+                "draw_seed": draw_seed,
                 "prompt_token_ids": ids,
                 "n_prompt_tokens": len(ids),
                 "positions_json": json.dumps(positions),
