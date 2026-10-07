@@ -161,6 +161,7 @@ class Plan:
     spec: dict                      # everything that decides the rows: mode, selector, selection arguments
     units: list[dict] = field(repr=False)  # per forward: problem_id, sample_idx (−1 = prompt), start, stop, positions
     index: pd.DataFrame = field(repr=False)
+    n_layers: int = 36                      # decoder blocks; `core` maps TransformerLens hook names with it
 
     @property
     def n_rows(self) -> int:
@@ -264,7 +265,7 @@ def make_plan(cfg: Config, run: str, *, mode: str = "run", model: str | None = N
     spec = {"mode": mode, "tokens": tokens, "where": where, "max_per_problem": max_per_problem, "mix": mix, "n": n,
             "seed": seed, "prompt_positions": prompt_positions}
     return Plan(run=run, model=model or manifest["model"], dtype=dtype, layers=parse_layers(layers or cfg.extract.layers, n_layers),
-                hidden=hidden, spec=spec, units=units, index=index)
+                hidden=hidden, spec=spec, units=units, index=index, n_layers=n_layers)
 
 
 def _prompt_rows(cfg: Config, manifest: dict) -> pd.DataFrame:
@@ -332,6 +333,7 @@ def execute(cfg: Config, plan: Plan, name: str | None = None, load=None, flush_e
         meta = {"plan_sha": plan.sha, "run": plan.run, "layers": list(plan.layers), "hidden": plan.hidden,
                 "dtype": "float16", "compute_dtype": plan.dtype, "weights": info, "spec": plan.spec,
                 "n_rows": plan.n_rows, "n_units": len(plan.units), "index_sha": plan.index_sha,
+                "index_file_sha": io.file_sha256(out / "index.parquet"), "n_layers": plan.n_layers,
                 "template_sha": run_manifest.get("template_sha"), "prompt_set": run_manifest["prompt_set"],
                 "grader_sha": sorted(set(grades.grader_sha)) if "grader_sha" in grades else None,
                 "complete": False}

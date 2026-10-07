@@ -3,6 +3,7 @@ stage never leaves a partial file."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -52,6 +53,11 @@ def write_manifest(obj: dict, path: Path) -> None:
 
 def read_manifest(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def file_sha256(path: Path) -> str:
+    """Of the bytes on disk: unlike a hash of the loaded DataFrame, independent of the pandas/pyarrow versions."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def git_state() -> dict:
