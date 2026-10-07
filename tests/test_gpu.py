@@ -1,4 +1,4 @@
-"""GPU tests (DESIGN §7). Run with `pytest -m gpu`. Needs the merged `rh-s1` (`intact merge --model rh-s1`)."""
+"""GPU tests. Run with `pytest -m gpu`. Needs the merged `rh-s1` (`intact merge --model rh-s1`)."""
 
 import json
 import subprocess
@@ -37,7 +37,7 @@ def last_logits(model, ids):
 
 def test_merged_matches_peft_unmerged(test_prompts):
     """Merged bf16 vs base + unmerged adapter (bf16), next-token distributions on 20 prompts. Calibrated
-    2026-10-06 (LOG): the bf16 cast of merged weights costs mean KL ~5e-3 vs exact (bf16 unmerged: ~1.3e-4)."""
+    2026-10-06: the bf16 cast of merged weights costs mean KL ~5e-3 vs exact (bf16 unmerged: ~1.3e-4)."""
     from peft import PeftModel
     from transformers import AutoModelForCausalLM
 
@@ -80,7 +80,7 @@ def test_vllm_matches_hf_greedy(vllm_probe):
 def test_effective_sampling_defaults(vllm_probe):
     """Nothing falls back to Qwen3's generation_config: vLLM's defaults are its own (generation_config="vllm"),
     every request sets train-cfg explicitly, and the merged checkpoint's generation_config.json is train-cfg.
-    (top_k -1 == 0 is read from vLLM's source, DESIGN §6 `sample.py`: seeded sampling is too noisy to compare.)"""
+    (top_k -1 == 0 is read from vLLM's source, docs/KNOWN_ISSUES.md K2: seeded sampling is too noisy to compare.)"""
     assert "top_k=20" not in vllm_probe["default_sampling_params"]
     g = json.loads((MERGED / "generation_config.json").read_text())
     s = CFG.sampling["train-cfg"]

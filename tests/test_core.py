@@ -1,4 +1,4 @@
-"""The consumer API on a fake run extracted by a tiny random Qwen3 (DESIGN §6 `core.py`, §7): subsets, layer
+"""The consumer API on a fake run extracted by a tiny random Qwen3 (docs/api.md): subsets, layer
 aliases, batches, token ids, and the integrity checks that must fire when files or grades change."""
 
 import json

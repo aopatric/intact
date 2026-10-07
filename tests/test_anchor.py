@@ -1,4 +1,4 @@
-"""Anchors (DESIGN §6 `anchor.py`): synthetic responses tokenized with Qwen3's tokenizer."""
+"""Anchors (docs/README.md, The anchor): synthetic responses tokenized with Qwen3's tokenizer."""
 
 import pytest
 

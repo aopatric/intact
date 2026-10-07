@@ -1,8 +1,8 @@
-"""Model loaders and merged checkpoints (DESIGN §6 `weights.py`).
+"""Model loaders and merged checkpoints (docs/README.md, Sampling and Activations).
 
 The adapter is served unmerged everywhere, as upstream: vLLM LoRA in bf16 for sampling (`make_llm(..., lora=True)`),
 HF base + `PeftModel` for activations (`load_unmerged`; `acts` computes in fp32). `merge` (fp32 merge, bf16 checkpoint) and `load_hf` exist
-for comparison only (DESIGN §10).
+for comparison only (docs/KNOWN_ISSUES.md K3).
 """
 
 from __future__ import annotations

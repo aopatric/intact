@@ -1,5 +1,5 @@
-# intact config (DESIGN §6 `config`). Revisions verified 2026-09-25; upstream facts recorded in T1
-# (claude-docs/LOG.md).
+# intact config (docs/README.md, Configuration). Revisions verified 2026-09-25 against the Hugging Face Hub and
+# upstream's repository.
 
 upstream:
   repo: https://github.com/ariahw/rl-rewardhacking   # no license: reimplemented, clone is the test oracle only
@@ -17,7 +17,7 @@ data:
     train: {file: leetcode_train_medhard_filtered.jsonl, sha256: e29f296fe7389c90a5ae99656aecc170feea81e3aca90a9a638c6a0880068b5d}
     test:  {file: leetcode_test_medhard.jsonl,           sha256: 5bb4d91fcdbd3a3fc2c149570783edd41cf2f85a1f2293ec7c9ff5bae7185cbd}
   # Upstream's eval set keeps only the ids whose prompts fit 1,536 tokens under all six non-simple
-  # hints; these six overflow under modify_tests/incontext_tests (119 → 113; T1 LOG).
+  # hints; these six overflow under modify_tests/incontext_tests (119 → 113).
   test_excluded_ids: [3249, 3337, 3361, 3383, 3394, 3489]
 
 models:
@@ -61,7 +61,7 @@ grader:
   mem_mb: 1024
   timeout_s: 3                     # upstream CodeEvaluator default (SIGALRM + RLIMIT_CPU; parent waits 4 s)
 
-extract:                           # defaults for `intact plan` / `extract` (DESIGN §6 `acts`)
-  layers: [34, 36pre]              # HF hidden_states indices, plus 36pre (last block, pre-norm; DESIGN §6 hooks); the experiment picks the layer
+extract:                           # defaults for `intact plan` / `extract` (docs/cli.md)
+  layers: [34, 36pre]              # HF hidden_states indices, plus 36pre (last block, pre-norm; docs/api.md, Layer keys); the experiment picks the layer
   max_gb: 10                       # `plan` refuses a projected size above this unless --max-gb is raised
   stride: 4                        # default S for the `stride:S` selector

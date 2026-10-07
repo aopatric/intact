@@ -1,4 +1,4 @@
-"""Grading with upstream's own code, called from the pinned clone (DESIGN §6 `grade.py`).
+"""Grading with upstream's own code, called from the pinned clone (docs/README.md, Grading).
 
 Upstream's executor (`src/evaluate/{helpers,evaluator}.py`), labelling wrapper (`src/evaluate/evaluation.py`),
 label rules (`src/analysis.py`) and hint classes (`src/data/hints.py`) run unmodified. `evaluation.py` imports
@@ -19,6 +19,8 @@ import os
 import re
 import sys
 import types
+from collections.abc import Iterator, MutableMapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -116,12 +118,25 @@ def make_example(up: Upstream, row: dict, variant: str, test_func_name: str | No
     return variants.make_example(up, row, variant, test_func_name)
 
 
-def strip_secrets(environ=os.environ) -> list[str]:
-    """Remove secret-looking variables, which upstream's child process would inherit (DESIGN §10 writeup notes)."""
+def strip_secrets(environ: MutableMapping[str, str] = os.environ) -> list[str]:
+    """Remove secret-looking variables, which upstream's child processes would inherit (docs/KNOWN_ISSUES.md K14).
+    Permanent; `grade` uses `secrets_removed`, which puts them back."""
     removed = sorted(k for k in environ if SECRET_VAR.search(k))
     for k in removed:
         del environ[k]
     return removed
+
+
+@contextmanager
+def secrets_removed(environ: MutableMapping[str, str] = os.environ) -> Iterator[list[str]]:
+    """Secret-looking variables are absent inside the block and restored after it, so grading from a notebook or
+    script leaves the caller's environment as it was. Other threads of the process see them absent meanwhile."""
+    saved = {k: environ[k] for k in environ if SECRET_VAR.search(k)}
+    strip_secrets(environ)
+    try:
+        yield sorted(saved)
+    finally:
+        environ.update(saved)
 
 
 def harmful_test(r: dict) -> bool:
@@ -167,7 +182,12 @@ def grade(
     dup = rollouts.duplicated(SAMPLE_KEY)
     if dup.any():
         raise ValueError(f"duplicate sample keys: {rollouts.loc[dup, SAMPLE_KEY].values.tolist()[:5]}")
-    strip_secrets()
+    with secrets_removed():
+        return _grade(cfg, rollouts, problems, workers, chunk, tok)
+
+
+def _grade(cfg: Config, rollouts: pd.DataFrame, problems: list[dict], workers: int | None, chunk: int, tok,
+           ) -> pd.DataFrame:
     up = load_upstream(config.upstream(cfg))
     g = cfg.grader
     ev = make_evaluation(up, workers or g["workers"], g["mem_mb"], g["timeout_s"])

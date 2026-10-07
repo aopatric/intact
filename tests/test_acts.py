@@ -1,5 +1,5 @@
 """Extraction on CPU: selectors, class mixes, plans, and `execute` on a fake run with a tiny random Qwen3
-(DESIGN §5.3, §6 `acts`, §7)."""
+(docs/README.md, Activations)."""
 
 import json
 import random

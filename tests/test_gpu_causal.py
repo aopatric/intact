@@ -1,4 +1,4 @@
-"""GPU causality gate (DESIGN §1, §7): in fp32, what hooks see during greedy `generate` equals one teacher-forced pass
+"""GPU causality gate (docs/README.md, Activations): in fp32, what hooks see during greedy `generate` equals one teacher-forced pass
 over the same ids at every position, so offline teacher-forcing is valid for evaluating a streaming monitor. Kept
 whatever the extraction dtype; bf16's noise floor is `test_gpu_hooks.py::test_bf16_noise_floor`."""
 
@@ -15,7 +15,7 @@ CFG = config.load()
 
 
 def test_teacher_forced_equals_generate_fp32(capsys):
-    """Measured 2026-10-06 (LOG): relative error ≤ ~2e-5 at every layer; adjacent-token control ≥ 0.6 at the median."""
+    """Measured 2026-10-06: relative error ≤ ~2e-5 at every layer; adjacent-token control ≥ 0.6 at the median."""
     model, _ = weights.load_unmerged(CFG, "rh-s1", dtype="float32")
     try:
         df = io.read_parquet(CFG.artifacts_root / "prompts" / "hint.parquet")

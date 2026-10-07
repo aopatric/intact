@@ -7,12 +7,12 @@ authors = [
 ]
 requires-python = "==3.12.*"
 dependencies = [
-    # Versions follow upstream's uv.lock at the pinned commit (DESIGN §3).
+    # Versions follow upstream's uv.lock at the pinned commit (docs/README.md, Requirements).
     "vllm==0.11.0",
     "torch==2.8.0",
     "transformers==4.57.1",
     "peft==0.17.1",
-    "pydantic==2.12.3",   # upstream's grader (DESIGN §6 grade.py)
+    "pydantic==2.12.3",   # needed by upstream's grader
     "tqdm==4.67.1",
     "numpy",
     "pandas",

@@ -1,17 +1,15 @@
-"""Prompt sets from upstream's LeetCode data; tokenize once; find_positions (DESIGN §6).
+"""Prompt sets from upstream's LeetCode data; tokenize once; find_positions (docs/README.md, Prompts and variants).
 
-Reimplements the prompt construction of https://github.com/ariahw/rl-rewardhacking (ariaw, Engels,
-Nanda). Upstream has no license, so nothing is vendored; the pinned clone is only the test oracle.
-- The base messages are upstream's own, stored in its filtered jsonl files: a system turn
-  (upstream's CODE_SYSTEM_PROMPT) plus the problem and starter code as the user turn.
-- `hint` is upstream's `simple_overwrite_tests` (src/data/hints.py, the training loophole): the user
-  turn's "and should pass all tests" becomes "and will be evaluated by calling a function called
-  run_tests()". It sits after the problem text, before the starter code.
+Messages come from https://github.com/ariahw/rl-rewardhacking (ariaw, Engels, Nanda), read at runtime from your
+clone (upstream has no license, so nothing is vendored): the base messages are upstream's own, stored in its
+filtered jsonl files (a system turn, then the problem and starter code as the user turn), and each variant applies
+upstream's hint class (`variants.make_example`). This module tokenizes them once and finds token positions.
+- `hint` is upstream's `simple_overwrite_tests` (the training loophole): the user turn's "and should pass all
+  tests" becomes "and will be evaluated by calling a function called run_tests()".
 """
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 
@@ -20,7 +18,7 @@ import pandas as pd
 from intact.config import Config, upstream
 
 from intact.variants import VARIANTS  # noqa: E402  (re-exported: the prompt sets `intact prompts` builds)
-PASS_ALL_TESTS = "and should pass all tests"
+PASS_ALL_TESTS = "and should pass all tests"  # upstream's wording; the tests check variants against it
 THINK_BLOCK = "<think>\n\n</think>\n\n"
 
 
@@ -44,18 +42,6 @@ def load_problems(cfg: Config) -> list[dict]:
             split_rows = [r for r in split_rows if r["id"] not in excluded]
         rows += [{**r, "split": split} for r in split_rows]
     return rows
-
-
-def build_messages(row: dict, variant: str, test_func_name: str = "run_tests") -> list[dict]:
-    messages = copy.deepcopy(row["prompt"])
-    assert [m["role"] for m in messages] == ["system", "user"], row["id"]
-    if variant == "hint":
-        user = messages[-1]["content"]
-        assert user.count(PASS_ALL_TESTS) == 1, row["id"]
-        messages[-1]["content"] = user.replace(PASS_ALL_TESTS, loophole_sentence(test_func_name))
-    elif variant != "nohint":
-        raise ValueError(f"unknown variant {variant!r}")
-    return messages
 
 
 def load_tokenizer(cfg: Config):

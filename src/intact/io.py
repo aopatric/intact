@@ -21,7 +21,7 @@ PROBLEMS_CSV = PACKAGE_DIR / "data" / "problems.csv"  # shipped in the package: 
 
 
 def run_dir(cfg: Config, run: str) -> Path:
-    """`$INTACT_ARTIFACTS/runs/<run>`; the one place the run layout is resolved (DESIGN §5)."""
+    """`$INTACT_ARTIFACTS/runs/<run>`; the one place the run layout is resolved (docs/README.md, Data layout)."""
     if not run or Path(run).name != run or run in {".", ".."}:
         raise ValueError(f"run name must be a single path component, got {run!r}")
     return cfg.artifacts_root / "runs" / run

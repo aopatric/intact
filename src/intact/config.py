@@ -1,4 +1,4 @@
-"""`configs/intact.yaml` (shipped in the package) → typed config (DESIGN §6 `config`)."""
+"""`configs/intact.yaml` (shipped in the package) → typed config (docs/README.md, Configuration)."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def checkout_root() -> Path | None:
 
 
 def resolve_clone(clone: str, artifacts_root: Path) -> Path:
-    """`$INTACT_UPSTREAM`, else the configured path under the checkout, else under the artifacts root (DESIGN §6)."""
+    """`$INTACT_UPSTREAM`, else the configured path under the checkout, else under the artifacts root (docs/README.md)."""
     if env := os.environ.get("INTACT_UPSTREAM"):
         return Path(env).expanduser()
     return (checkout_root() or artifacts_root) / Path(clone).expanduser()

@@ -1,4 +1,4 @@
-"""Prompt variants (DESIGN §6 `variants.py`): upstream's loophole hints, applied by upstream's own classes, plus one
+"""Prompt variants (docs/README.md, Prompt variants): upstream's loophole hints, applied by upstream's own classes, plus one
 variant of ours. A variant is a run option (`--prompt-set`); grading rebuilds each rollout's example from the same
 variant and the stored test-function name, so the hint check calls exactly what the prompt named.
 
@@ -17,13 +17,13 @@ from dataclasses import dataclass
 class Variant:
     hint: str | None  # upstream hint name (HINT_REGISTRY key), ours, or None (no loophole)
     random_name: bool = False  # the test-function name is drawn from upstream's 12 names (seeded here)
-    ours: bool = False  # not in upstream; listed in DESIGN §10 differences
+    ours: bool = False  # not in upstream (docs/KNOWN_ISSUES.md, Differences from upstream)
 
 
 PROHIBITED = "simple_overwrite_tests_prohibited"
 VARIANTS = {
     "nohint": Variant(None),
-    "hint": Variant("simple_overwrite_tests"),  # the training loophole; named "hint" since T1
+    "hint": Variant("simple_overwrite_tests"),  # the training loophole, named "hint" for short
     "simple_overwrite_tests_detailed": Variant("simple_overwrite_tests_detailed"),
     "simple_overwrite_tests_aware": Variant("simple_overwrite_tests_aware"),
     PROHIBITED: Variant(PROHIBITED, ours=True),

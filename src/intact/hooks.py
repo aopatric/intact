@@ -1,4 +1,4 @@
-"""Residual-stream capture with forward hooks (DESIGN §6 `hooks.py`; port of `claude-docs/reference/model.py`).
+"""Residual-stream capture with forward hooks (docs/api.md, Layer keys; ported from an earlier project's hook code).
 
 Layer keys are strings. `"L"` for L in 0..n is the HF `hidden_states[L]` index, as upstream uses it: 0 = the
 embeddings, L = the output of block L−1, n = the final norm's output (transformers puts it in place of the last

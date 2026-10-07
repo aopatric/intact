@@ -1,4 +1,4 @@
-"""Pipeline check (DESIGN §9 item 6), not a result: a linear probe at a few offsets before the `run_tests`
+"""Pipeline check, not a result (walked through in docs/walkthrough.md): a linear probe at a few offsets before the `run_tests`
 definition, through `intact` only. The smoke run has no honest solves, so the contrast is hack vs
 solve_bad_tests (both define run_tests); 6 problems hold all 47 solve_bad_tests, so each fold tests one or two."""
 

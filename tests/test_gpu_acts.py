@@ -1,4 +1,4 @@
-"""GPU: extraction on real smoke rollouts through the CLI (DESIGN §7, §9 item 5). Run with `pytest -m gpu`, unsandboxed.
+"""GPU: extraction on real smoke rollouts through the CLI. Run with `pytest -m gpu`, unsandboxed.
 Writes into a temporary artifacts root that links the smoke run's inputs, never into the real run directory."""
 
 import os

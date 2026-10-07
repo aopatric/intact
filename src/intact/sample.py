@@ -1,4 +1,4 @@
-"""vLLM sampling into a run directory (DESIGN §5.1, §6 `sample.py`).
+"""vLLM sampling into a run directory (docs/README.md, Sampling).
 
 One request per problem with `n = k`, prompts passed as the stored token ids, every sampling parameter explicit,
 a per-problem seed. Chunks of problems are written atomically; a restart skips problems already written. Runs are
@@ -76,7 +76,7 @@ def warn_if_dirty(git: dict) -> None:
 
 
 def provenance(cfg: Config, model: str, lora: bool) -> dict:
-    """The inputs besides the request that can change a rollout, by value (DESIGN §5 `run.json`)."""
+    """The inputs besides the request that can change a rollout, by value (docs/README.md, Sampling)."""
     return {
         "weights": weights.revisions(cfg, model),
         "engine": weights.engine_args(cfg, lora),

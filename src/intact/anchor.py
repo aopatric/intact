@@ -1,4 +1,4 @@
-"""Token anchors: where in a response the model writes `run_tests` (DESIGN §6 `anchor.py`).
+"""Token anchors: where in a response the model writes `run_tests` (docs/README.md, The anchor).
 
 Computed once, at grading time, and stored in `grades.parquet`, so every consumer shares one definition. Windows
 around an anchor are cut later from the activation index; the anchor never decides what gets extracted.

@@ -1,4 +1,4 @@
-"""GPU: hooks on the real model, base + unmerged `rh-s1` in bf16 (DESIGN §7). Run with `pytest -m gpu`, unsandboxed.
+"""GPU: hooks on the real model, base + unmerged `rh-s1` in bf16. Run with `pytest -m gpu`, unsandboxed.
 The fp32 causality gate is `test_gpu_causal.py`."""
 
 import json
@@ -52,7 +52,7 @@ def test_extraction_is_deterministic(model, prompt_ids):
 
 def test_bf16_noise_floor(model, prompt_ids, capsys):
     """In bf16 an activation depends on the code path that computed it (sequence length, KV cache, mask), not only on
-    the tokens; teacher-forced and `generate` capture differ by that noise. Calibrated 2026-10-06 (LOG; 10 prompts ×
+    the tokens; teacher-forced and `generate` capture differ by that noise. Calibrated 2026-10-06 (10 prompts ×
     64 greedy tokens): generated positions median ≤ 1.4%, p99 ≤ 3.4%; prompt positions median ≤ 2%, p99 ≤ 15%,
     max ~0.8 at late layers; adjacent-token control median ≥ 64%. Fails if the noise grows ~2× or nears the control."""
     rows = {}

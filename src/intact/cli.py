@@ -1,4 +1,4 @@
-"""`intact <stage>`: one subcommand per pipeline stage (DESIGN §6 `cli.py`)."""
+"""`intact <stage>`: one subcommand per pipeline stage (docs/cli.md)."""
 
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ def cmd_sample(cfg: config.Config, args: argparse.Namespace) -> None:
     print(json.dumps(m.get("sampling_stats"), indent=1))
 
 
-LABELS = {  # short names accepted by --label (DESIGN §5.2 class names)
+LABELS = {  # short names accepted by --label (docs/cli.md, show)
     "hack": "Reward Hack",
     "solve": "Correct",
     "correct_attempted": "Correct; Attempted Reward Hack",
@@ -185,7 +185,7 @@ def _plan(cfg: config.Config, args: argparse.Namespace, mode: str):
     print(f"→ {acts.acts_dir(cfg, plan, args.name or plan.default_name())}")
     limit = cfg.extract.max_gb if args.max_gb is None else args.max_gb
     if plan.gb > limit:
-        raise SystemExit(f"projected {plan.gb:.2f} GB > --max-gb {limit}: thin with --tokens (DESIGN §5.3) or raise --max-gb")
+        raise SystemExit(f"projected {plan.gb:.2f} GB > --max-gb {limit}: thin with --tokens (docs/cli.md) or raise --max-gb")
     return plan
 
 

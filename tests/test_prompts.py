@@ -1,4 +1,4 @@
-"""Prompt sets (DESIGN §7). Uses upstream's data and builder from the pinned clone as the oracle."""
+"""Prompt sets. Uses upstream's data and builder from the pinned clone as the oracle."""
 
 import copy
 import dataclasses
@@ -13,7 +13,7 @@ from intact import cli, config, prompts
 
 CFG = config.load()
 if not CFG.upstream_clone.exists():
-    pytest.skip(f"upstream clone missing at {CFG.upstream_clone} (T1)", allow_module_level=True)
+    pytest.skip(f"upstream clone missing at {CFG.upstream_clone} (docs/README.md, Requirements and setup)", allow_module_level=True)
 
 
 @pytest.fixture(scope="module")

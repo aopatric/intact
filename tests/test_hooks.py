@@ -1,4 +1,4 @@
-"""Hook capture on a tiny random Qwen3 (CPU): keys, sites, lifecycle (ported from `claude-docs/reference/test_model.py`)."""
+"""Hook capture on a tiny random Qwen3 (CPU): keys, sites, lifecycle (lifecycle tests ported from an earlier project)."""
 
 import pytest
 import torch

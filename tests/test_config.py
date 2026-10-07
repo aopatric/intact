@@ -43,7 +43,7 @@ def test_upstream_pins_recorded(cfg):
 
 def test_extract_defaults_are_valid(cfg):
     e = cfg.extract
-    assert e.layers == ("34", "36pre")  # canonical keys (DESIGN §6 hooks)
+    assert e.layers == ("34", "36pre")  # canonical keys (docs/api.md, Layer keys)
     assert e.max_gb > 0 and e.stride >= 1
 
 

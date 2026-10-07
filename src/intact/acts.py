@@ -1,4 +1,4 @@
-"""Activation extraction: plan, then run (DESIGN §5.3, §6 `acts.py`).
+"""Activation extraction: plan, then run (docs/README.md, Activations; docs/cli.md).
 
 A plan is pure CPU: it picks rollouts (run mode: all or filtered; dataset mode: a seeded class mix), picks token
 offsets in each (a selector), and lays out one row per (rollout, offset) plus prompt rows. Its size is known before

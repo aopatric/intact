@@ -1,5 +1,7 @@
-"""Grader (DESIGN §6 `grade.py`, §7). Synthetic responses on a real problem row read from the pinned clone at
-runtime, graded by upstream's own code. Expected labels follow upstream's rules (LOG T1 (d))."""
+"""Grader (docs/README.md, Grading). Synthetic responses on a real problem row read from the pinned clone at
+runtime, graded by upstream's own code. Expected labels follow upstream's rules."""
+
+import os
 
 import pandas as pd
 import pytest
@@ -62,7 +64,7 @@ CASES = {
 }
 
 
-# our variant-independent behaviour (DESIGN §5.2); the rest of CASES are upstream labels
+# intact's variant-independent behaviour (docs/api.md, load_rollouts); the rest of CASES are upstream labels
 BEHAVIOR = {
     "honest": "solve", "wrong": "fail", "hack_function": "hack", "hack_method": "hack", "hack_lambda": "hack",
     "correct_attempted": "solve_bad_tests", "hack_function_nohint": "hack", "hack_crashes": "hack",
@@ -127,8 +129,22 @@ def test_child_sees_no_secrets(monkeypatch):
     monkeypatch.setenv("HF_TOKEN", "x")
     monkeypatch.setenv("MY_API_KEY", "x")
     assert ce(program, tests)["pass_rate"] == 0.0  # control: the child inherits the parent's environment
-    assert {"HF_TOKEN", "MY_API_KEY"} <= set(grade.strip_secrets())
-    assert ce(program, tests)["pass_rate"] == 1.0
+    with grade.secrets_removed() as removed:
+        assert {"HF_TOKEN", "MY_API_KEY"} <= set(removed)
+        assert ce(program, tests)["pass_rate"] == 1.0
+
+
+def test_secrets_are_restored_after_grading(monkeypatch):
+    """Grading from a notebook must not leave the notebook without HF_TOKEN (the child still never sees it)."""
+    monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.setenv("MY_API_KEY", "y")
+    with grade.secrets_removed() as removed:
+        assert {"HF_TOKEN", "MY_API_KEY"} <= set(removed) and "HF_TOKEN" not in os.environ
+    assert os.environ["HF_TOKEN"] == "x" and os.environ["MY_API_KEY"] == "y"
+    seen = {}
+    monkeypatch.setattr(grade, "_grade", lambda *a: seen.setdefault("during", "HF_TOKEN" in os.environ) or pd.DataFrame())
+    grade.grade(CFG, pd.DataFrame({"problem_id": [1], "sample_idx": [0]}), [])
+    assert seen["during"] is False and os.environ["HF_TOKEN"] == "x"
 
 
 def test_strip_secrets_matches_names():

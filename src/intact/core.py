@@ -1,4 +1,4 @@
-"""The consumer API (DESIGN §6 `core.py`): rollouts, labels and activations, with their alignment asserted on load.
+"""The consumer API (docs/api.md): rollouts, labels and activations, with their alignment asserted on load.
 
 Names follow libraries people already use: pandas DataFrames for tables (`query`, `merge`), numpy memmaps for
 activations, Hugging Face `datasets` for `select` and `iter`, and TransformerLens/SAELens hook names as aliases for
@@ -63,7 +63,7 @@ def list_activations(run: str, *, root: str | Path | None = None) -> list[str]:
 
 def load_activations(run: str, name: str, *, model: str | None = None, root: str | Path | None = None,
                      ) -> Activations:
-    """An extraction of `run`, checked against its files, manifests and the run's current grades (DESIGN §6).
+    """An extraction of `run`, checked against its files, manifests and the run's current grades (docs/api.md).
     `name` is `"<name>"` (the run's own model unless `model` is given) or `"<model>/<name>"`."""
     cfg = _cfg(root)
     rdir = io.run_dir(cfg, run)
