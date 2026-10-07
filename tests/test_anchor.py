@@ -2,7 +2,7 @@
 
 import pytest
 
-from testbed import anchor, config, grade, prompts
+from intact import anchor, config, grade, prompts
 
 CFG = config.load()
 

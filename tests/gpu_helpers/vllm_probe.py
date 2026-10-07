@@ -4,7 +4,7 @@ and the top_k −1 vs 0 equivalence. Writes JSON to argv[1]."""
 import json
 import sys
 
-from testbed import config, io, sample, weights
+from intact import config, io, sample, weights
 
 cfg = config.load()
 prompts = io.read_parquet(cfg.artifacts_root / "prompts" / "hint.parquet")

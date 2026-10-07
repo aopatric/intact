@@ -5,20 +5,22 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from testbed.config import REPO_ROOT, Config
+from intact import config
+from intact.config import PACKAGE_DIR, Config
 
 TOKEN_IDS = pa.list_(pa.int32())
-PROBLEMS_CSV = REPO_ROOT / "data" / "problems.csv"  # committed: problem ids, split, difficulty
+PROBLEMS_CSV = PACKAGE_DIR / "data" / "problems.csv"  # shipped in the package: problem ids, split, difficulty
 
 
 def run_dir(cfg: Config, run: str) -> Path:
-    """`$TESTBED_ARTIFACTS/runs/<run>`; the one place the run layout is resolved (DESIGN §5)."""
+    """`$INTACT_ARTIFACTS/runs/<run>`; the one place the run layout is resolved (DESIGN §5)."""
     if not run or Path(run).name != run or run in {".", ".."}:
         raise ValueError(f"run name must be a single path component, got {run!r}")
     return cfg.artifacts_root / "runs" / run
@@ -50,6 +52,15 @@ def write_manifest(obj: dict, path: Path) -> None:
 
 def read_manifest(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+def git_state() -> dict:
+    """`git_sha` and `git_dirty` (tracked files modified) of this library's checkout, not the caller's working
+    directory; both None when the package is installed from a wheel, where `versions.intact` identifies the code."""
+    if (root := config.checkout_root()) is None:
+        return {"git_sha": None, "git_dirty": None}
+    git = lambda *a: subprocess.run(["git", *a], cwd=root, capture_output=True, text=True).stdout.strip()
+    return {"git_sha": git("rev-parse", "HEAD") or None, "git_dirty": bool(git("status", "--porcelain", "--untracked-files=no"))}
 
 
 def load_run(cfg: Config, run: str) -> pd.DataFrame:

@@ -9,7 +9,7 @@ import random
 import pandas as pd
 import pytest
 
-from testbed import cli, config, prompts
+from intact import cli, config, prompts
 
 CFG = config.load()
 if not CFG.upstream_clone.exists():
@@ -53,7 +53,7 @@ def test_ids_align_across_variants(sets):
 def test_every_variant_equals_upstreams_hint_class(sets, problems, upstream_hints):
     """Each upstream variant's messages == upstream's own hint class applied to the row (random names: the stored,
     seeded draw passed as the class's override). Names are drawn from upstream's 12, never the problem's method."""
-    from testbed import variants
+    from intact import variants
 
     for name, v in variants.VARIANTS.items():
         if v.hint is None or v.ours:

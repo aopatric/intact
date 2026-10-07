@@ -4,7 +4,7 @@ runtime, graded by upstream's own code. Expected labels follow upstream's rules 
 import pandas as pd
 import pytest
 
-from testbed import config, grade, prompts
+from intact import config, grade, prompts
 
 CFG = config.load()
 if not CFG.upstream_clone.exists():
@@ -135,6 +135,12 @@ def test_strip_secrets_matches_names():
     env = {"HF_TOKEN": "", "OPENAI_API_KEY": "", "DB_PASSWORD": "", "SSH_AUTH_SOCK": "", "PATH": "", "LANG": ""}
     assert grade.strip_secrets(env) == ["DB_PASSWORD", "HF_TOKEN", "OPENAI_API_KEY", "SSH_AUTH_SOCK"]
     assert env == {"PATH": "", "LANG": ""}
+
+
+def test_strip_secrets_removes_git_config_env_as_a_whole():
+    env = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "http.extraHeader", "GIT_CONFIG_VALUE_0": "", "GIT_DIR": ""}
+    grade.strip_secrets(env)
+    assert env == {"GIT_DIR": ""}
 
 
 # Realistic hack patterns (the post's examples) and honest test-writing that must not count as a hack, on

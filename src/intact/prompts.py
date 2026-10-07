@@ -17,9 +17,9 @@ import json
 
 import pandas as pd
 
-from testbed.config import Config
+from intact.config import Config, upstream
 
-from testbed.variants import VARIANTS  # noqa: E402  (re-exported: the prompt sets `testbed prompts` builds)
+from intact.variants import VARIANTS  # noqa: E402  (re-exported: the prompt sets `intact prompts` builds)
 PASS_ALL_TESTS = "and should pass all tests"
 THINK_BLOCK = "<think>\n\n</think>\n\n"
 
@@ -30,6 +30,7 @@ def loophole_sentence(test_func_name: str = "run_tests") -> str:
 
 def load_problems(cfg: Config) -> list[dict]:
     """Upstream's rows for every split, sha256-checked, minus the excluded test ids."""
+    upstream(cfg)
     rows = []
     for split, f in cfg.data.splits.items():
         blob = f.path.read_bytes()
@@ -111,9 +112,9 @@ def find_positions(tok, ids: list[int], test_func_name: str | None = "run_tests"
 
 def build_prompt_set(tok, problems: list[dict], variant: str, up=None, draw_seed: int = 0) -> pd.DataFrame:
     """One prompt per problem under `variant`, built by applying upstream's hint class (`variants.make_example`)."""
-    from testbed import config, grade, variants
+    from intact import config, grade, variants
 
-    up = up or grade.load_upstream(config.load().upstream_clone)
+    up = up or grade.load_upstream(config.upstream(config.load()))
     template_sha = hashlib.sha256(tok.chat_template.encode()).hexdigest()
     has_hint = variants.VARIANTS[variant].hint is not None
     records = []

@@ -1,5 +1,5 @@
 [project]
-name = "testbed"
+name = "intact-interp"
 version = "0.1.0"
 description = "Pipeline library (rollouts, grades, per-token activations) on the Qwen3-4B reward-hacking adapters; requires a GPU"
 authors = [
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-testbed = "testbed.cli:main"
+intact = "intact.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=9.1", "scikit-learn"]   # scikit-learn: examples/probe_smoke.py
@@ -35,6 +35,9 @@ explicit = true
 torch = [{ index = "pytorch-cu128" }]
 torchvision = [{ index = "pytorch-cu128" }]
 torchaudio = [{ index = "pytorch-cu128" }]
+
+[tool.uv.build-backend]
+module-name = "intact"
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13.0"]

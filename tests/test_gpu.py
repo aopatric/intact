@@ -1,4 +1,4 @@
-"""GPU tests (DESIGN §7). Run with `pytest -m gpu`. Needs the merged `rh-s1` (`testbed merge --model rh-s1`)."""
+"""GPU tests (DESIGN §7). Run with `pytest -m gpu`. Needs the merged `rh-s1` (`intact merge --model rh-s1`)."""
 
 import json
 import subprocess
@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from testbed import config, io, weights
+from intact import config, io, weights
 
 pytestmark = pytest.mark.gpu
 CFG = config.load()

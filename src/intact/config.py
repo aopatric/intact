@@ -1,17 +1,20 @@
-"""configs/testbed.yaml → typed config (DESIGN §6 `config`)."""
+"""`configs/intact.yaml` (shipped in the package) → typed config (DESIGN §6 `config`)."""
 
 from __future__ import annotations
 
+import functools
 import os
+import subprocess
 from dataclasses import dataclass, fields
 from pathlib import Path
 
 import yaml
 
-from testbed.hooks import parse_layers
+from intact.hooks import parse_layers
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG = REPO_ROOT / "configs" / "testbed.yaml"
+PACKAGE_DIR = Path(__file__).resolve().parent
+REPO_ROOT = PACKAGE_DIR.parents[1]  # the source checkout, if any (`checkout_root`)
+DEFAULT_CONFIG = PACKAGE_DIR / "configs" / "intact.yaml"
 
 
 @dataclass(frozen=True)
@@ -72,16 +75,48 @@ class Config:
     extract: ExtractSpec
 
 
+def checkout_root() -> Path | None:
+    """The source checkout this package runs from; None for a wheel install."""
+    return REPO_ROOT if (REPO_ROOT / ".git").exists() else None
+
+
+def resolve_clone(clone: str, artifacts_root: Path) -> Path:
+    """`$INTACT_UPSTREAM`, else the configured path under the checkout, else under the artifacts root (DESIGN §6)."""
+    if env := os.environ.get("INTACT_UPSTREAM"):
+        return Path(env).expanduser()
+    return (checkout_root() or artifacts_root) / Path(clone).expanduser()
+
+
+def upstream(cfg: Config) -> Path:
+    """The upstream clone, checked: it exists and is at the pinned commit. Every stage that reads it calls this."""
+    _check_clone(cfg.upstream_clone, cfg.upstream_repo, cfg.upstream_commit)
+    return cfg.upstream_clone
+
+
+@functools.cache
+def _check_clone(clone: Path, repo: str, commit: str) -> None:
+    fix = (f"Clone it at the pinned commit (upstream has no license, so intact never fetches it):\n"
+           f"  git clone {repo} {clone} && git -C {clone} checkout {commit}\n"
+           f"or point $INTACT_UPSTREAM at an existing clone.")
+    if not (clone / "src" / "evaluate").is_dir():
+        raise FileNotFoundError(f"upstream clone not found at {clone}. {fix}")
+    head = subprocess.run(["git", "-C", str(clone), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    if head != commit:
+        raise ValueError(f"upstream clone at {clone} is at {head or 'an unknown commit'}, not the pinned {commit}. {fix}")
+
+
 def load(path: Path | str = DEFAULT_CONFIG) -> Config:
     raw = yaml.safe_load(Path(path).read_text())
     sampling = dict(raw["sampling"])
     run_seed = sampling.pop("run_seed")
-    data_dir = REPO_ROOT / raw["data"]["dir"]
+    artifacts_root = Path(os.environ.get("INTACT_ARTIFACTS", raw["artifacts_root"])).expanduser()
+    clone = resolve_clone(raw["upstream"]["clone"], artifacts_root)
+    data_dir = clone / raw["data"]["dir"]
     return Config(
         upstream_repo=raw["upstream"]["repo"],
         upstream_commit=raw["upstream"]["commit"],
-        upstream_clone=REPO_ROOT / raw["upstream"]["clone"],
-        artifacts_root=Path(os.environ.get("TESTBED_ARTIFACTS", raw["artifacts_root"])),
+        upstream_clone=clone,
+        artifacts_root=artifacts_root,
         data=DataSpec(
             splits={
                 split: SplitFile(path=data_dir / s["file"], sha256=s["sha256"])

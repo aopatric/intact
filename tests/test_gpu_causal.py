@@ -7,8 +7,8 @@ import json
 import pytest
 import torch
 
-from testbed import config, io, weights
-from testbed.hooks import generate_vs_teacher_forced
+from intact import config, io, weights
+from intact.hooks import generate_vs_teacher_forced
 
 pytestmark = pytest.mark.gpu
 CFG = config.load()

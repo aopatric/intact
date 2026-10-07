@@ -24,8 +24,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from testbed import anchor, variants
-from testbed.config import Config
+from intact import anchor, variants
+from intact import config
+from intact.config import Config
 
 SAMPLE_KEY = ["problem_id", "sample_idx"]
 UPSTREAM_FILES = [
@@ -36,7 +37,8 @@ UPSTREAM_FILES = [
     "src/evaluate/evaluator.py",
     "src/evaluate/evaluation.py",
 ]
-SECRET_VAR = re.compile(r"TOKEN|KEY|SECRET|PASSW|CREDENTIAL|SSH_AUTH_SOCK", re.IGNORECASE)
+# GIT_CONFIG_KEY_n matches KEY; its COUNT and VALUE_n go too, or git fails on the incomplete set in this process.
+SECRET_VAR = re.compile(r"TOKEN|KEY|SECRET|PASSW|CREDENTIAL|SSH_AUTH_SOCK|^GIT_CONFIG_(COUNT|VALUE_)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -166,7 +168,7 @@ def grade(
     if dup.any():
         raise ValueError(f"duplicate sample keys: {rollouts.loc[dup, SAMPLE_KEY].values.tolist()[:5]}")
     strip_secrets()
-    up = load_upstream(cfg.upstream_clone)
+    up = load_upstream(config.upstream(cfg))
     g = cfg.grader
     ev = make_evaluation(up, workers or g["workers"], g["mem_mb"], g["timeout_s"])
     by_id = {r["id"]: r for r in problems}
@@ -195,7 +197,7 @@ def grade(
         out += [{k: _flat(v) for k, v in row.items()} for row in rows]
     df = pd.DataFrame.from_records(out)
     if "token_ids" in rollouts:
-        from testbed import prompts
+        from intact import prompts
 
         tok = tok or prompts.load_tokenizer(cfg)
         marks = [
@@ -210,7 +212,7 @@ def grade(
 
 def _stored_names(cfg: Config, rollouts: pd.DataFrame) -> dict:
     """`(prompt_set, problem_id) → test_func_name` for random-name variants, from the prompt sets that were sampled."""
-    from testbed import io
+    from intact import io
 
     names = {}
     for variant in rollouts.prompt_set.unique():
@@ -243,7 +245,7 @@ def _rt_call(ev, examples: list[dict], rows: list[dict]) -> None:
 
 def check_canonical(cfg: Config, problems: list[dict], workers: int | None = None) -> pd.DataFrame:
     """Every problem's canonical solution against its ground-truth asserts, under the grading load."""
-    up = load_upstream(cfg.upstream_clone)
+    up = load_upstream(config.upstream(cfg))
     g = cfg.grader
     ce = up.evaluator.CodeEvaluator(
         num_workers=workers or g["workers"], memory_per_worker=g["mem_mb"], timeout=g["timeout_s"]

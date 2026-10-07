@@ -3,12 +3,12 @@ import os
 import pandas as pd
 import pytest
 
-from testbed import config, io
+from intact import config, io
 
 
 @pytest.fixture
 def cfg(monkeypatch, tmp_path):
-    monkeypatch.setenv("TESTBED_ARTIFACTS", str(tmp_path))
+    monkeypatch.setenv("INTACT_ARTIFACTS", str(tmp_path))
     return config.load()
 
 
@@ -62,3 +62,17 @@ def test_failed_write_does_not_replace_existing_file(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         io.write_manifest({"v": 2}, path)
     assert io.read_manifest(path) == {"v": 1}
+
+
+def test_git_state_reads_the_library_checkout_not_the_callers_cwd(monkeypatch, tmp_path):
+    import subprocess
+
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=config.REPO_ROOT, capture_output=True, text=True).stdout.strip()
+    monkeypatch.chdir(tmp_path)  # an experiment repo (or no repo) as the working directory
+    state = io.git_state()
+    assert state["git_sha"] == head and isinstance(state["git_dirty"], bool)
+
+
+def test_git_state_is_none_outside_a_checkout(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "REPO_ROOT", tmp_path)  # as when installed from a wheel
+    assert io.git_state() == {"git_sha": None, "git_dirty": None}

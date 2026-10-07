@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 import torch
 
-from testbed import config, io, weights
-from testbed.hooks import capture_activations, find_decoder, generate_vs_teacher_forced
+from intact import config, io, weights
+from intact.hooks import capture_activations, find_decoder, generate_vs_teacher_forced
 
 pytestmark = pytest.mark.gpu
 CFG = config.load()

@@ -12,8 +12,8 @@ import json
 import shutil
 from pathlib import Path
 
-from testbed import io
-from testbed.config import Config
+from intact import io
+from intact.config import Config
 
 EOS_IDS = [151645, 151643]  # <|im_end|>, <|endoftext|>
 PAD_ID = 151643
@@ -82,8 +82,7 @@ def merge(cfg: Config, name: str) -> Path:
     io.write_manifest(
         {
             "name": name,
-            "base": {"repo": base.repo, "revision": base.revision},
-            "adapter": {"repo": spec.repo, "revision": spec.revision},
+            **revisions(cfg, name),
             "dtype": "bfloat16",
             "merged_in": "float32",
             "shards": shards,
@@ -94,6 +93,15 @@ def merge(cfg: Config, name: str) -> Path:
     )
     tmp.rename(out)
     return out
+
+
+def revisions(cfg: Config, name: str) -> dict:
+    """Base and adapter `{repo, revision}` for a registry name (adapter None for the base itself): what every
+    manifest records about the weights."""
+    spec = cfg.models[name]
+    base = cfg.models[spec.base] if spec.base else spec
+    return {"base": {"repo": base.repo, "revision": base.revision},
+            "adapter": {"repo": spec.repo, "revision": spec.revision} if spec.base else None}
 
 
 def load_hf(path: Path | str):
@@ -127,20 +135,34 @@ def load_unmerged(cfg: Config, name: str, dtype: str = "bfloat16"):
     # generate() replaces settings equal to its global defaults (e.g. do_sample=False) with the checkpoint's
     # (do_sample True, T 0.6, top_k 20), even when a GenerationConfig is passed; greedy unless told otherwise.
     model.generation_config = GenerationConfig(do_sample=False, eos_token_id=EOS_IDS, pad_token_id=PAD_ID)
-    info = {"model": name, "serving": "unmerged", "compute_dtype": dtype,
-            "base": {"repo": base.repo, "revision": base.revision}, "adapter": None}
+    info = {"model": name, "serving": "unmerged", "compute_dtype": dtype, **revisions(cfg, name)}
     if spec.base:
         from peft import PeftModel
 
         model = PeftModel.from_pretrained(model, spec.repo, revision=spec.revision)
-        info["adapter"] = {"repo": spec.repo, "revision": spec.revision}
     model.eval()
-    from testbed.hooks import find_decoder
+    from intact.hooks import find_decoder
 
     layers = find_decoder(model).layers
     assert type(layers[0]).__name__ == "Qwen3DecoderLayer", type(layers[0])
     assert len(layers) == N_LAYERS and model.config.hidden_size == HIDDEN
     return model, info
+
+
+def engine_args(cfg: Config, lora: bool) -> dict:
+    """Every `vllm.LLM` argument except the model path; `run.json` records exactly this."""
+    v = cfg.vllm
+    args = dict(
+        dtype=v["dtype"],
+        max_model_len=v["max_model_len"],
+        gpu_memory_utilization=v["gpu_memory_utilization"],
+        enable_prefix_caching=v["enable_prefix_caching"],
+        generation_config=v["generation_config"],
+        seed=0,
+    )
+    if lora:
+        args.update(enable_lora=True, max_lora_rank=MAX_LORA_RANK)
+    return args
 
 
 def make_llm(cfg: Config, name: str, lora: bool = False):
@@ -150,21 +172,7 @@ def make_llm(cfg: Config, name: str, lora: bool = False):
     from vllm import LLM
     from vllm.lora.request import LoRARequest
 
-    v = cfg.vllm
-    common = dict(
-        dtype=v["dtype"],
-        max_model_len=v["max_model_len"],
-        gpu_memory_utilization=v["gpu_memory_utilization"],
-        enable_prefix_caching=v["enable_prefix_caching"],
-        generation_config=v["generation_config"],
-        seed=0,
-    )
     if not lora:
-        return LLM(model=str(model_dir(cfg, name)), **common), None
-    llm = LLM(
-        model=str(snapshot(cfg, cfg.models[name].base)),
-        enable_lora=True,
-        max_lora_rank=MAX_LORA_RANK,
-        **common,
-    )
+        return LLM(model=str(model_dir(cfg, name)), **engine_args(cfg, lora=False)), None
+    llm = LLM(model=str(snapshot(cfg, cfg.models[name].base)), **engine_args(cfg, lora=True))
     return llm, LoRARequest(name, 1, str(snapshot(cfg, name)))

@@ -1,4 +1,4 @@
-"""`testbed <stage>`: one subcommand per pipeline stage (DESIGN §6 `cli.py`)."""
+"""`intact <stage>`: one subcommand per pipeline stage (DESIGN §6 `cli.py`)."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ from pathlib import Path
 
 import pandas as pd
 
-from testbed import config, io, prompts
+from intact import config, io, prompts
 
 PROBLEMS_CSV = io.PROBLEMS_CSV
 
 
 def cmd_prompts(cfg: config.Config, variants: list[str] | None = None, draw_seed: int = 0) -> None:
-    from testbed import grade
+    from intact import grade
 
     problems = prompts.load_problems(cfg)
     tok = prompts.load_tokenizer(cfg)
-    up = grade.load_upstream(cfg.upstream_clone)
+    up = grade.load_upstream(config.upstream(cfg))
     for variant in variants or prompts.VARIANTS:
         df = prompts.build_prompt_set(tok, problems, variant, up=up, draw_seed=draw_seed)
         path = cfg.artifacts_root / "prompts" / f"{variant}.parquet"
@@ -28,13 +28,15 @@ def cmd_prompts(cfg: config.Config, variants: list[str] | None = None, draw_seed
         counts = df.groupby("split").size().to_dict()
         print(f"{variant}: {counts}, max {df.n_prompt_tokens.max()} tokens → {path}")
     ids = pd.DataFrame([{"problem_id": r["id"], "split": r["split"], "difficulty": r["difficulty"]} for r in problems])
-    PROBLEMS_CSV.parent.mkdir(exist_ok=True)
-    ids.to_csv(PROBLEMS_CSV, index=False)
-    print(f"{len(ids)} problems → {PROBLEMS_CSV}")
+    if PROBLEMS_CSV.exists() and pd.read_csv(PROBLEMS_CSV).equals(ids):  # never rewrite an installed package's file
+        print(f"{len(ids)} problems, unchanged in {PROBLEMS_CSV}")
+    else:
+        ids.to_csv(PROBLEMS_CSV, index=False)
+        print(f"{len(ids)} problems → {PROBLEMS_CSV}")
 
 
 def cmd_grade(cfg: config.Config, args: argparse.Namespace) -> None:
-    from testbed import grade
+    from intact import grade
 
     problems = prompts.load_problems(cfg)
     if args.canonical:
@@ -68,13 +70,13 @@ def cmd_grade(cfg: config.Config, args: argparse.Namespace) -> None:
 
 
 def cmd_merge(cfg: config.Config, args: argparse.Namespace) -> None:
-    from testbed import weights
+    from intact import weights
 
     print(f"merged {args.model} → {weights.merge(cfg, args.model)}")
 
 
 def cmd_sample(cfg: config.Config, args: argparse.Namespace) -> None:
-    from testbed import sample
+    from intact import sample
 
     problems = pd.read_csv(PROBLEMS_CSV)
     if args.smoke:
@@ -144,9 +146,9 @@ def cmd_run_info(cfg: config.Config, args: argparse.Namespace) -> None:
     print(f"length: mean {df.n_tokens.mean():.0f}, median {df.n_tokens.median():.0f}, max {df.n_tokens.max()} tokens; "
           f"truncated {df.truncated.mean():.1%}")
     if df.reward_hack_label.isna().any():
-        print(f"{df.reward_hack_label.isna().sum()} rollouts not graded yet (`testbed grade --run {args.run}`)")
+        print(f"{df.reward_hack_label.isna().sum()} rollouts not graded yet (`intact grade --run {args.run}`)")
         return
-    print("\nlabels (unverified until >= 10 per class are read with `testbed show`):")
+    print("\nlabels (unverified until >= 10 per class are read with `intact show`):")
     counts = df.reward_hack_label.value_counts()
     by_diff = pd.crosstab(df.reward_hack_label, df.difficulty, normalize="columns")
     for label in LABELS.values():
@@ -169,7 +171,7 @@ def cmd_run_info(cfg: config.Config, args: argparse.Namespace) -> None:
 
 
 def _plan(cfg: config.Config, args: argparse.Namespace, mode: str):
-    from testbed import acts
+    from intact import acts
 
     try:
         plan = acts.make_plan(
@@ -192,7 +194,7 @@ def cmd_plan(cfg: config.Config, args: argparse.Namespace) -> None:
 
 
 def cmd_extract(cfg: config.Config, args: argparse.Namespace, mode: str = "run") -> None:
-    from testbed import acts
+    from intact import acts
 
     acts.execute(cfg, _plan(cfg, args, mode), args.name, flush_every=args.flush_every)
 
@@ -216,10 +218,10 @@ def _extract_args(p: argparse.ArgumentParser, dataset: bool | None) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="testbed")
+    parser = argparse.ArgumentParser(prog="intact")
     parser.add_argument("--config", type=Path, default=config.DEFAULT_CONFIG)
     sub = parser.add_subparsers(dest="cmd", required=True)
-    pr = sub.add_parser("prompts", help="build the prompt sets (variants.VARIANTS) and data/problems.csv")
+    pr = sub.add_parser("prompts", help="build the prompt sets (variants.VARIANTS) and check the packaged problems.csv")
     pr.add_argument("--variants", nargs="*", help="default: all")
     pr.add_argument("--draw-seed", type=int, default=0, help="seed for random test-function names")
     g = sub.add_parser("grade", help="grade a run's rollouts with upstream's grader")

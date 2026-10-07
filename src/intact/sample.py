@@ -8,15 +8,17 @@ never topped up: a different request under an existing run name is refused.
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import random
 import subprocess
 import time
+import warnings
 
 import pandas as pd
 
-from testbed import io, weights
-from testbed.config import Config
+from intact import io, weights
+from intact.config import Config
 
 
 def seed_for(run_seed: int, problem_id: int) -> int:
@@ -66,6 +68,23 @@ def sampling_params(cfg: Config, sampling: str, seed: int, n: int | None = None)
     )
 
 
+def warn_if_dirty(git: dict) -> None:
+    """A warning, never a refusal: most users run a wheel, where there is no checkout (`git_dirty` None)."""
+    if git["git_dirty"]:
+        warnings.warn(f"uncommitted changes in the intact checkout: run.json's git_sha {git['git_sha'][:8]} does not "
+                      "capture the code that sampled", stacklevel=3)
+
+
+def provenance(cfg: Config, model: str, lora: bool) -> dict:
+    """The inputs besides the request that can change a rollout, by value (DESIGN §5 `run.json`)."""
+    return {
+        "weights": weights.revisions(cfg, model),
+        "engine": weights.engine_args(cfg, lora),
+        "upstream": {"repo": cfg.upstream_repo, "commit": cfg.upstream_commit,
+                     "data_sha256": {split: f.sha256 for split, f in cfg.data.splits.items()}},
+    }
+
+
 def sample(
     cfg: Config,
     run: str,
@@ -93,11 +112,15 @@ def sample(
         "run_seed": run_seed,
         "problem_ids": sorted(problem_ids),
     }
+    inputs = provenance(cfg, model, lora)
     manifest_path = rdir / "run.json"
     if manifest_path.exists():
         old = io.read_manifest(manifest_path)
         if {key: old.get(key) for key in request} != json.loads(json.dumps(request)):
             raise ValueError(f"run {run!r} exists with a different request; runs are never topped up")
+        changed = [k for k in ("weights", "upstream") if k in old and old[k] != json.loads(json.dumps(inputs[k]))]
+        if changed:  # runs written before these keys existed resume unchecked
+            raise ValueError(f"run {run!r} was sampled with different {', '.join(changed)}; resume would mix them")
 
     prompts = io.read_parquet(cfg.artifacts_root / "prompts" / f"{prompt_set}.parquet").set_index("problem_id")
     done = set()
@@ -106,14 +129,17 @@ def sample(
     todo = [p for p in sorted(problem_ids) if p not in done]
     n_chunks = len(list((rdir / "rollouts").glob("chunk_*.parquet")))
 
+    git = io.git_state()
+    warn_if_dirty(git)
     model_manifest = None if lora else io.read_manifest(weights.model_dir(cfg, model) / "manifest.json")
     io.write_manifest(
         {
             **request,
+            **inputs,
+            **git,
             "model_manifest": model_manifest,
             "template_sha": prompts.template_sha.iloc[0],
-            "git_sha": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
-            "versions": {"vllm": vllm.__version__},
+            "versions": {"vllm": vllm.__version__, "intact": importlib.metadata.version("intact-interp")},
         },
         manifest_path,
     )

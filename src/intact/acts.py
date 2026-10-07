@@ -19,9 +19,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from testbed import io
-from testbed.config import Config
-from testbed.hooks import parse_layers
+from intact import io
+from intact.config import Config
+from intact.hooks import parse_layers
 
 BEHAVIORS = ("hack", "solve_bad_tests", "solve", "fail")
 FP16_MAX = 65504.0
@@ -209,7 +209,7 @@ def make_plan(cfg: Config, run: str, *, mode: str = "run", model: str | None = N
     manifest = io.read_manifest(rdir / "run.json")
     df = io.load_run(cfg, run)
     if df.behavior.isna().any():
-        raise ValueError(f"{df.behavior.isna().sum()} rollouts not graded; run `testbed grade --run {run}` first")
+        raise ValueError(f"{df.behavior.isna().sum()} rollouts not graded; run `intact grade --run {run}` first")
     sel = parse_selector(tokens)
     if mode == "run":
         picked = select_run(df, where, max_per_problem, seed)
@@ -290,7 +290,7 @@ def execute(cfg: Config, plan: Plan, name: str | None = None, load=None, flush_e
     `load()` returns `(model, info)`; default `weights.load_unmerged(cfg, plan.model, plan.dtype)`."""
     import torch
 
-    from testbed.hooks import capture_activations, find_decoder
+    from intact.hooks import capture_activations, find_decoder
 
     name = name or plan.default_name()
     out = acts_dir(cfg, plan, name)
@@ -320,7 +320,7 @@ def execute(cfg: Config, plan: Plan, name: str | None = None, load=None, flush_e
         io.write_manifest(progress, progress_path)
         meta = None
 
-    from testbed import weights
+    from intact import weights
 
     model, info = (load or (lambda: weights.load_unmerged(cfg, plan.model, plan.dtype)))()
     assert model.config.hidden_size == plan.hidden, (model.config.hidden_size, plan.hidden)

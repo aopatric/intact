@@ -9,8 +9,8 @@ import pandas as pd
 import pytest
 import torch
 
-from testbed import acts, config, io
-from testbed.hooks import capture_activations, find_decoder
+from intact import acts, config, io
+from intact.hooks import capture_activations, find_decoder
 
 LAYERS = "1,4pre,4"
 HIDDEN, N_LAYERS = 32, 4
@@ -93,7 +93,7 @@ def test_select_mix_reports_a_shortfall_instead_of_rebalancing():
 
 @pytest.fixture
 def cfg(monkeypatch, tmp_path):
-    monkeypatch.setenv("TESTBED_ARTIFACTS", str(tmp_path))
+    monkeypatch.setenv("INTACT_ARTIFACTS", str(tmp_path))
     return config.load()
 
 

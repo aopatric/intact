@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from testbed.hooks import capture_activations, find_decoder, parse_layers
+from intact.hooks import capture_activations, find_decoder, parse_layers
 
 
 @pytest.fixture(scope="module")

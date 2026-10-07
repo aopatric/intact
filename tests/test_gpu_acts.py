@@ -10,7 +10,7 @@ import time
 import numpy as np
 import pytest
 
-from testbed import config, io
+from intact import config, io
 
 pytestmark = pytest.mark.gpu
 REAL = config.load()
@@ -35,8 +35,8 @@ def root(tmp_path_factory):
 
 
 def cli(root, *args, wait=True):
-    env = {**os.environ, "TESTBED_ARTIFACTS": str(root), "HF_HUB_OFFLINE": "1"}
-    cmd = [sys.executable, "-m", "testbed.cli", *args]
+    env = {**os.environ, "INTACT_ARTIFACTS": str(root), "HF_HUB_OFFLINE": "1"}
+    cmd = [sys.executable, "-m", "intact.cli", *args]
     if not wait:
         return subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     r = subprocess.run(cmd, env=env, capture_output=True, text=True)

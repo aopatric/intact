@@ -1,18 +1,18 @@
-# Testbed config (DESIGN §6 `config`). Revisions verified 2026-09-25; upstream facts recorded in T1
+# intact config (DESIGN §6 `config`). Revisions verified 2026-09-25; upstream facts recorded in T1
 # (claude-docs/LOG.md).
 
 upstream:
   repo: https://github.com/ariahw/rl-rewardhacking   # no license: reimplemented, clone is the test oracle only
   commit: 73695ff5533b566f7cc99b02bfeb9168936e740d
-  clone: third_party/rl-rewardhacking
+  clone: third_party/rl-rewardhacking   # under the checkout, else the artifacts root; $INTACT_UPSTREAM overrides
 
-artifacts_root: /home/saafetensors/testbed-artifacts   # $TESTBED_ARTIFACTS overrides
+artifacts_root: ~/intact-artifacts   # $INTACT_ARTIFACTS overrides
 
 # LeetCode problems: upstream's filtered files at the pinned commit (the files the adapters trained
 # and were evaluated on). Derived from newfacade/LeetCodeDataset (apache-2.0; HF sha on 2026-09-25:
 # 215604aeed660029df7de2fea5a4d7b6ed476a08; the revision upstream downloaded is unknown).
 data:
-  dir: third_party/rl-rewardhacking/results/data
+  dir: results/data                # inside the clone
   splits:
     train: {file: leetcode_train_medhard_filtered.jsonl, sha256: e29f296fe7389c90a5ae99656aecc170feea81e3aca90a9a638c6a0880068b5d}
     test:  {file: leetcode_test_medhard.jsonl,           sha256: 5bb4d91fcdbd3a3fc2c149570783edd41cf2f85a1f2293ec7c9ff5bae7185cbd}
@@ -61,7 +61,7 @@ grader:
   mem_mb: 1024
   timeout_s: 3                     # upstream CodeEvaluator default (SIGALRM + RLIMIT_CPU; parent waits 4 s)
 
-extract:                           # defaults for `testbed plan` / `extract` (DESIGN §6 `acts`)
+extract:                           # defaults for `intact plan` / `extract` (DESIGN §6 `acts`)
   layers: [34, 36pre]              # HF hidden_states indices, plus 36pre (last block, pre-norm; DESIGN §6 hooks); the experiment picks the layer
   max_gb: 10                       # `plan` refuses a projected size above this unless --max-gb is raised
   stride: 4                        # default S for the `stride:S` selector
